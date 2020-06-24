@@ -1,0 +1,24 @@
+{
+  "name": "sublisp",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/utatatata/sublisp.git"
+  },
+  "author": "utakuma <i@utakuma.info>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/utatatata/sublisp/issues"
+  },
+  "homepage": "https://github.com/utatatata/sublisp#readme",
+  "devDependencies": {
+    "purescript": "^0.13.8",
+    "purty": "^6.2.0",
+    "spago": "^0.15.3"
+  }
+}
