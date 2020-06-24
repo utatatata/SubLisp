@@ -7,7 +7,7 @@ import Control.Monad.Rec.Class (class MonadRec)
 import Control.Monad.State (class MonadState, StateT, evalStateT, get, gets, modify_)
 import Data.Either (Either(..))
 import Data.Identity (Identity)
-import Data.List (List(..), foldr, length, zip)
+import Data.List (List(..), foldr, last, length, zip, (:))
 import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe(..), maybe)
@@ -85,7 +85,7 @@ interpret (TmQuoted t@(TmQuoted _)) = pure $ VQuoted t
 
 interpret (TmQuoted (TmVar v)) = pure $ VSymbol v
 
-interpret (TmQuoted (TmPair h t)) = foldr VPair (VConst CNil) <$> sequence (Cons (interpret h) (map interpret t))
+interpret (TmQuoted (TmPair h t)) = foldr VPair (VConst CNil) <$> sequence ((interpret h) : (map interpret t))
 
 interpret (TmQuoted t) = interpret t
 
@@ -108,13 +108,13 @@ interpret pair@(TmPair head tail) =
           Cons t Nil -> pure $ VQuoted t
           _ -> throwArgsNumError 1
         VConst CFun -> case tail of
-          Cons args (Cons body Nil) -> case args of
+          Cons args body -> case args of
             TmConst CNil -> pure $ VFun Nil body
-            TmPair x xs -> case traverse maybeTmVar (Cons x xs) of
+            TmPair x xs -> case traverse maybeTmVar (x : xs) of
               Nothing -> throwError $ InvalidFunctionDefinition pair
               Just vs -> pure $ VFun vs body
             _ -> throwError $ InvalidFunctionDefinition pair
-          _ -> throwArgsNumError 2
+          _ -> throwError $ TooFewArguments pair
         VConst CDef -> case tail of
           Cons (TmVar var) (Cons value Nil) ->
             interpret value
@@ -154,25 +154,9 @@ interpret pair@(TmPair head tail) =
         VSymbol s ->
           interpret (TmVar s)
             >>= case _ of
-                VFun (args :: List String) body -> case compare (length tail) (length args) of
-                  LT -> throwError $ TooFewArguments pair
-                  GT -> throwError $ TooManyArguments pair
-                  EQ -> do
-                    InterpretState env <- get
-                    newEnv <- M.union env <<< M.fromFoldable <$> zip args <$> traverse interpret tail
-                    case runInterpreter newEnv (interpret body) of
-                      Left err -> throwError err
-                      Right v -> pure v
+                VFun args body -> callFun args body
                 _ -> throwError $ InvalidApplication pair
-        VFun args body -> case compare (length tail) (length args) of
-          LT -> throwError $ TooFewArguments pair
-          GT -> throwError $ TooManyArguments pair
-          EQ -> do
-            InterpretState env <- get
-            newEnv <- M.union env <<< M.fromFoldable <$> zip args <$> traverse interpret tail
-            case runInterpreter newEnv (interpret body) of
-              Left err -> throwError err
-              Right v -> pure v
+        VFun args body -> callFun args body
         _ -> throwError $ InvalidApplication pair
   where
   throwArgsNumError n = throwError $ if length tail < n then TooFewArguments pair else TooManyArguments pair
@@ -180,3 +164,13 @@ interpret pair@(TmPair head tail) =
   maybeTmVar = case _ of
     TmVar v -> Just v
     _ -> Nothing
+
+  callFun args body = case compare (length tail) (length args) of
+    LT -> throwError $ TooFewArguments pair
+    GT -> throwError $ TooManyArguments pair
+    EQ -> do
+      InterpretState env <- get
+      newEnv <- M.union env <<< M.fromFoldable <$> zip args <$> traverse interpret tail
+      case runInterpreter newEnv (traverse interpret body) of
+        Left err -> throwError err
+        Right vs -> maybe (pure $ VConst CNil) pure (last vs)

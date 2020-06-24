@@ -5,11 +5,12 @@ import Control.Alt ((<|>))
 import Control.Lazy (fix)
 import Data.Array as A
 import Data.List (List(..))
+import Data.Maybe (maybe)
 import Data.String.CodeUnits (fromCharArray)
 import SubLisp.Const (Const(..))
 import SubLisp.Term (Term(..))
 import Text.Parsing.Parser (Parser)
-import Text.Parsing.Parser.Combinators (between, sepEndBy)
+import Text.Parsing.Parser.Combinators (between, optionMaybe, sepEndBy)
 import Text.Parsing.Parser.String (char, eof, noneOf, satisfy, skipSpaces, string, whiteSpace)
 
 parse :: Parser String Term

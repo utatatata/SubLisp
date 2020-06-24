@@ -12,7 +12,7 @@ data Value
   | VSymbol String
   | VQuoted Term
   | VPair Value Value
-  | VFun (List String) Term
+  | VFun (List String) (List Term)
 
 derive instance eqValue :: Eq Value
 
